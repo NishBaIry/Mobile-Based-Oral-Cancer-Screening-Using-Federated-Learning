@@ -1,0 +1,688 @@
+﻿🏥 OralScan - AI-Powered Oral Cancer Screening System
+A hybrid deep learning mobile application for early detection and classification of oral cancer lesions
+  
+         
+
+
+🎯 Project Overview
+OralScan is an AI-powered mobile application designed for early screening of oral cancer lesions. The system uses a hybrid deep learning architecture combining:
+* YOLOv11n for lesion detection (localization) 
+* MobileNetV2 for malignancy classification (benign/malignant) 
+* Google Gemini AI for human-readable diagnosis generation 
+The app is designed as a screening tool to assist in early detection, NOT as a replacement for professional medical diagnosis.
+Key Features
+* ✅ Real-time lesion detection with bounding box visualization 
+* ✅ Malignancy classification with confidence scores 
+* ✅ AI-generated health assessments in non-frightening language 
+* ✅ Analysis history with image storage 
+* ✅ On-device inference for privacy 
+* ✅ Works offline (except AI diagnosis) 
+
+
+🔬 Problem Statement
+
+
+“To develop a privacy-preserving oral lesion detection system that enables early and accessible screening for all individuals, overcoming India’s shortage of specialists and costly dental check-ups.”
+
+
+Oral cancer is one of the top cancers in India, with very high incidence and most cases detected late, leading to poor 5-year survival. Early detection can improve survival to over 80%, but access to oral pathologists is limited—especially in rural areas—and regular dental check-ups are expensive for a large part of the population. Visual screening by non-experts often misses early-stage lesions, and existing AI tools either lack transparency or compromise user privacy.
+To address this, we propose a mobile-based AI screening system that works on any standard Android smartphone. It can detect and classify oral lesions (like leukoplakia and erythroplakia), assess their risk, and give actionable recommendations—all without requiring a clinic visit. The model runs locally on the device, ensuring privacy, and continuously improves using federated learning, where smartphones share only model weight updates (not images or personal data). This makes screening accessible, affordable, private, and continuously improving for millions of people across India.
+
+
+🏗 Solution Architecture
+Hybrid Two-Stage Detection Pipeline
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         INPUT IMAGE                                      │
+│                    (Oral cavity photo)                                   │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      STAGE 1: YOLO v11n                                  │
+│                    (Lesion Detection)                                    │
+│                                                                          │
+│  • Input: Full image (640x640)                                          │
+│  • Output: Bounding boxes + Lesion type                                 │
+│  • Classes: Erythroplakia, Leukoplakia                                  │
+│  • Confidence threshold: 40%                                            │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+            Lesion Found          No Lesion Found
+                    │                   │
+                    ▼                   ▼
+        ┌───────────────────┐   ┌───────────────────┐
+        │   Crop Region     │   │   Use Full Image  │
+        │   (Bounding Box)  │   │   (Fallback)      │
+        └─────────┬─────────┘   └─────────┬─────────┘
+                  │                       │
+                  └───────────┬───────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    STAGE 2: MobileNetV2                                  │
+│                  (Malignancy Classification)                             │
+│                                                                          │
+│  • Input: Cropped lesion (224x224) or full image                        │
+│  • Output: Benign/Malignant + Confidence                                │
+│  • Sigmoid activation (binary classification)                           │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      RISK ASSESSMENT                                     │
+│                                                                          │
+│  Based on MobileNetV2 confidence:                                       │
+│  • Malignant >80%  → HIGH RISK                                          │
+│  • Malignant 50-80% → MODERATELY HIGH RISK                              │
+│  • Malignant <50%  → LOW RISK (leaning benign)                          │
+│  • Benign >80%     → LOW RISK                                           │
+│  • Benign 50-80%   → MODERATELY LOW RISK                                │
+└─────────────────────────────┬───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    STAGE 3: Gemini AI                                    │
+│                (Diagnosis Interpretation)                                │
+│                                                                          │
+│  • Converts technical results to friendly language                      │
+│  • Provides recommendations                                             │
+│  • Non-frightening, supportive tone                                     │
+└─────────────────────────────────────────────────────────────────────────┘
+Why Hybrid Architecture?
+Single Model Approach
+	Our Hybrid Approach
+	One model does everything
+	Specialized models for each task
+	Higher complexity
+	Optimized for mobile
+	More prone to errors
+	Better accuracy through specialization
+	Harder to debug
+	Easy to identify failure points
+	Less interpretable
+	Clear pipeline stages
+	
+
+🔄 System Workflow
+Step-by-Step Process
+1. USER CAPTURES IMAGE
+   └── Camera or Gallery selection
+   
+2. IMAGE PREPROCESSING
+   ├── Decode image bytes
+   ├── Resize for YOLO (640x640)
+   └── Normalize pixel values (0-1)
+
+
+3. YOLO DETECTION
+   ├── Run inference on TFLite model
+   ├── Parse output tensor [1, 7, 8400]
+   ├── Filter detections > 40% confidence
+   ├── Select BEST detection (highest confidence)
+   └── Extract bounding box coordinates
+
+
+4. REGION EXTRACTION
+   ├── If lesion detected: Crop bounding box region
+   └── If no detection: Use full image as fallback
+
+
+5. MOBILENET CLASSIFICATION
+   ├── Resize region to 224x224
+   ├── Run inference
+   ├── Interpret sigmoid output
+   │   ├── >0.5 = Malignant
+   │   └── <0.5 = Benign
+   └── Calculate confidence
+
+
+6. RISK ASSESSMENT
+   ├── Combine YOLO + MobileNet results
+   ├── Determine risk level
+   └── Generate risk message
+
+
+7. BOUNDING BOX VISUALIZATION
+   ├── Draw box on detected lesion
+   └── Color-code based on risk
+
+
+8. AI DIAGNOSIS (Gemini)
+   ├── Send results to Gemini API
+   ├── Generate human-readable assessment
+   └── Provide recommendations
+
+
+9. SAVE TO HISTORY
+   ├── Store annotated image
+   ├── Store all results
+   └── Enable future reference
+
+
+10. DISPLAY RESULTS
+    ├── Show annotated image
+    ├── Show detection details
+    ├── Show AI assessment
+    └── Show disclaimer
+
+
+🧠 Models & Training
+Model 1: YOLOv11n (Detection)
+Attribute
+	Details
+	Architecture
+	YOLOv11 Nano (Ultralytics)
+	Purpose
+	Detect and localize oral lesions
+	Input Size
+	640 × 640 × 3
+	Output
+	Bounding boxes + class probabilities
+	Classes
+	Background, Erythroplakia, Leukoplakia
+	Format
+	TensorFlow Lite (.tflite)
+	Size
+	~5-6 MB
+	Training Details:
+* Framework: Ultralytics YOLO 
+* Dataset: Custom oral lesion dataset from Roboflow 
+* Augmentation: Rotation, flip, brightness, contrast 
+* Epochs: Trained until convergence 
+* Export: TFLite float32 format 
+Model 2: MobileNetV2 (Classification)
+Attribute
+	Details
+	Architecture
+	MobileNetV2 (trained from scratch)
+	Purpose
+	Classify lesions as benign/malignant
+	Input Size
+	224 × 224 × 3
+	Output
+	Single sigmoid value (0-1)
+	Classes
+	Benign (0), Malignant (1)
+	Format
+	TensorFlow Lite (.tflite)
+	Size
+	~3-4 MB
+	Training Details:
+* Framework: TensorFlow/Keras 
+* Dataset: Combined from multiple sources (see below) 
+* Training: From scratch (outperformed transfer learning) 
+* Activation: Sigmoid (binary classification) 
+* Metrics: Focused on high recall (minimize false negatives) 
+Dataset Sources
+1. Kaggle Datasets
+   * Oral cancer image datasets 
+   * Pre-labeled benign/malignant images 
+2. Research Projects
+   * Publicly available research datasets 
+   * Academic oral pathology collections 
+3. AIIMS Delhi Research
+   * Dataset from research conducted by AIIMS Delhi 
+   * Clinically validated oral cancer images 
+   * Expert-labeled ground truth 
+Key Training Insight
+MobileNetV2 trained from scratch outperformed transfer learning!
+This is because:
+* Medical images are very different from ImageNet 
+* Smaller dataset benefits from simpler learning 
+* Model learned domain-specific features better 
+
+
+🛡 False Prediction Prevention
+Multi-Layer Validation Strategy
+We implemented several mechanisms to minimize false predictions:
+1. Confidence Thresholding
+YOLO Detection Threshold: 40%
+├── Only detections above 40% confidence are considered
+├── Reduces false positive detections
+└── Filters out noise and artifacts
+
+
+MobileNet Classification:
+├── Uses sigmoid activation (not softmax)
+├── Outputs probability, not just class
+└── Confidence directly interpretable
+2. Single Best Detection
+Problem: YOLO may detect multiple overlapping boxes
+Solution: Keep only the HIGHEST confidence detection
+
+
+Benefits:
+├── Avoids duplicate/overlapping detections
+├── Focuses on most confident finding
+└── Cleaner user experience
+3. Hybrid Verification
+Both models must agree for high-risk classification:
+
+
+YOLO detects lesion → MobileNet classifies → Combined assessment
+
+
+This two-stage verification reduces:
+├── False positives (detecting non-lesions)
+└── Misclassification errors
+4. Fallback Mechanism
+If YOLO detects nothing:
+├── Don't immediately say "all clear"
+├── Run MobileNet on full image
+├── Provide cautious assessment
+└── Recommend monitoring
+
+
+This catches cases where:
+├── Lesion is subtle
+├── Image quality is poor
+└── YOLO threshold missed it
+5. Risk Level Gradation
+Instead of binary "Cancer/No Cancer":
+
+
+HIGH RISK         → "Please see a doctor soon"
+MODERATELY HIGH   → "Recommend checkup"
+MODERATELY LOW    → "Likely benign, consider checkup if concerned"
+LOW RISK          → "Appears normal, monitor regularly"
+
+
+Benefits:
+├── Avoids unnecessary panic
+├── Appropriate urgency levels
+├── Always recommends professional consultation
+6. Medical Disclaimers
+Multiple disclaimer placements:
+├── Welcome screen banner
+├── Analysis screen info
+├── Results section footer
+└── AI diagnosis always mentions "screening tool only"
+7. High Recall Priority
+For cancer detection, we prioritize:
+
+
+RECALL > PRECISION
+
+
+Why?
+├── False negative (missing cancer) is WORSE than
+├── False positive (flagging benign as suspicious)
+
+
+A false positive → Extra doctor visit (minor inconvenience)
+A false negative → Missed cancer (potentially fatal)
+
+
+📱 Mobile Application
+App Structure
+OralScan App
+│
+├── 🏠 Welcome Screen
+│   ├── App branding & logo
+│   ├── "How it Works" steps
+│   ├── Quick action cards
+│   ├── Disclaimer banner
+│   └── Navigation buttons (Analyze/History)
+│
+├── 🔍 Analyze Screen
+│   ├── Image upload (Camera/Gallery)
+│   ├── Image preview with bounding box
+│   ├── Processing animation
+│   ├── Detection results card
+│   │   ├── Lesion detected (Yes/No)
+│   │   ├── Lesion type
+│   │   ├── Detection confidence
+│   │   ├── Classification (Benign/Malignant)
+│   │   └── Classification confidence
+│   ├── AI Health Assessment
+│   │   ├── Risk level badge
+│   │   ├── What this means
+│   │   └── Recommendations
+│   └── Auto-save to history
+│
+└── 📜 History Screen
+    ├── List of past analyses
+    ├── Image thumbnails with bounding boxes
+    ├── Risk level badges
+    ├── Date/time stamps
+    ├── Tap for detailed view
+    ├── Delete individual records
+    └── Clear all history option
+UI/UX Design
+Aspect
+	Implementation
+	Color Scheme
+	Light blue (#4A90E2) + Purple (#7B68EE) gradient
+	Background
+	Clean white/light grey (#F8FAFC)
+	Cards
+	White with subtle shadows
+	Risk Colors
+	🟢 Green (Low) → 🟡 Yellow → 🟠 Orange → 🔴 Red (High)
+	Style
+	Modern, PhonePe/Paytm inspired
+	Tone
+	Friendly, non-frightening, supportive
+	Key Features
+Feature
+	Description
+	On-Device Inference
+	Models run locally on phone, no data sent to servers
+	Privacy Focused
+	Images processed locally, only text sent to Gemini
+	Offline Capable
+	Detection works without internet (AI diagnosis needs network)
+	History Storage
+	Local storage using SharedPreferences
+	Bounding Box Viz
+	Visual indication of detected lesion area
+	
+
+🛠 Tools & Technologies
+Development Stack
+Category
+	Technology
+	Mobile Framework
+	Flutter 3.x (Dart)
+	Native Integration
+	Kotlin (Android)
+	ML Inference
+	TensorFlow Lite
+	Object Detection
+	YOLOv11n (Ultralytics)
+	Classification
+	MobileNetV2 (Custom trained)
+	AI Diagnosis
+	Google Gemini 2.0 Flash API
+	Local Storage
+	SharedPreferences
+	Image Handling
+	image_picker package
+	HTTP Requests
+	http package
+	Training & Development Tools
+Tool
+	Purpose
+	Python
+	Model training scripts
+	TensorFlow/Keras
+	MobileNetV2 training
+	Ultralytics
+	YOLO training and export
+	Roboflow
+	Dataset management & augmentation
+	Android Studio
+	Native Android development
+	VS Code
+	Flutter development
+	Linux (Ubuntu)
+	Development environment
+	RTX 4060 GPU
+	Model training acceleration
+	Model Export Pipeline
+Training → Saved Model → TFLite Conversion → Android Assets
+
+
+YOLOv11n:
+├── Train with Ultralytics
+├── Export: model.export(format="tflite")
+└── Output: best_float32.tflite
+
+
+MobileNetV2:
+├── Train with TensorFlow
+├── Save: model.save()
+├── Convert: TFLiteConverter
+└── Output: mobilenetv2_oral_cancer.tflite
+
+
+📁 Project Structure
+my_app/
+│
+├── android/
+│   └── app/
+│       └── src/
+│           └── main/
+│               ├── assets/
+│               │   ├── yolo_oral_cancer.tflite      # YOLO model
+│               │   └── mobilenetv2_oral_cancer.tflite # MobileNet model
+│               └── kotlin/
+│                   └── com/example/my_app/
+│                       └── MainActivity.kt           # Native inference code
+│
+├── lib/
+│   ├── main.dart                    # App entry point & routing
+│   ├── screens/
+│   │   ├── welcome_screen.dart      # Home screen
+│   │   ├── analyze_screen.dart      # Detection screen
+│   │   └── history_screen.dart      # History screen
+│   ├── models/
+│   │   └── analysis_result.dart     # Data model
+│   └── services/
+│       └── storage_service.dart     # Local storage
+│
+├── pubspec.yaml                     # Flutter dependencies
+└── README.md                        # This file
+
+
+✅ Current Status
+Completed Features
+Component
+	Status
+	Notes
+	YOLOv11n Training
+	✅ Done
+	Trained on custom oral lesion dataset
+	MobileNetV2 Training
+	✅ Done
+	High recall achieved
+	TFLite Export
+	✅ Done
+	Both models exported successfully
+	Android Native Integration
+	✅ Done
+	Platform channels working
+	YOLO Inference
+	✅ Done
+	Detection with bounding boxes
+	MobileNet Inference
+	✅ Done
+	Classification working
+	Hybrid Pipeline
+	✅ Done
+	Both models integrated
+	Risk Assessment Logic
+	✅ Done
+	Multi-level risk classification
+	Bounding Box Visualization
+	✅ Done
+	Drawn on detected lesions
+	Gemini AI Integration
+	✅ Done
+	Generates friendly diagnosis
+	Welcome Screen
+	✅ Done
+	Modern UI with navigation
+	Analyze Screen
+	✅ Done
+	Full detection workflow
+	History Screen
+	✅ Done
+	View/delete past analyses
+	Local Storage
+	✅ Done
+	SharedPreferences implementation
+	Performance Metrics
+Metric
+	Value
+	MobileNetV2 Recall
+	High (prioritized for cancer detection)
+	Inference Time
+	<1 second (on-device)
+	App Size
+	~50-60 MB (including models)
+	Supported Android
+	7.0+ (API 24+)
+	
+
+🚧 Work Left - Phase 2
+Federated Learning Architecture
+The next major milestone is implementing Federated Learning (FL) to enable collaborative model improvement while preserving privacy.
+What is Federated Learning?
+Traditional ML:
+├── Collect all data centrally
+├── Train model on server
+└── Privacy concerns with medical data
+
+
+Federated Learning:
+├── Data stays on user devices
+├── Only model updates are shared
+├── Privacy preserved
+└── Collaborative improvement
+Proposed FL Architecture
+┌─────────────────────────────────────────────────────────────────┐
+│                     CENTRAL SERVER                               │
+│                  (Aggregation Server)                            │
+│                                                                  │
+│  • Receives model updates from devices                          │
+│  • Aggregates updates (FedAvg algorithm)                        │
+│  • Distributes improved global model                            │
+│  • Does NOT see raw patient images                              │
+└─────────────────────────────┬───────────────────────────────────┘
+                              │
+            ┌─────────────────┼─────────────────┐
+            │                 │                 │
+            ▼                 ▼                 ▼
+┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
+│   Device 1        │ │   Device 2        │ │   Device N        │
+│   (Hospital A)    │ │   (Clinic B)      │ │   (User Phone)    │
+│                   │ │                   │ │                   │
+│ • Local data      │ │ • Local data      │ │ • Local data      │
+│ • Local training  │ │ • Local training  │ │ • Local training  │
+│ • Send gradients  │ │ • Send gradients  │ │ • Send gradients  │
+│ • Receive updates │ │ • Receive updates │ │ • Receive updates │
+└───────────────────┘ └───────────────────┘ └───────────────────┘
+FL Implementation Plan
+Task
+	Description
+	Priority
+	Server Setup
+	Flask/FastAPI server for aggregation
+	High
+	FL Framework
+	Integrate TensorFlow Federated or Flower
+	High
+	Local Training
+	Enable on-device model fine-tuning
+	High
+	Gradient Encryption
+	Secure aggregation protocol
+	Medium
+	Model Versioning
+	Track model iterations
+	Medium
+	Differential Privacy
+	Add noise to gradients
+	Medium
+	Admin Dashboard
+	Monitor FL rounds
+	Low
+	Why FL for This Project?
+1. Privacy Compliance
+   * Medical images are sensitive (HIPAA, GDPR) 
+   * Patients may not consent to data sharing 
+   * FL keeps images on device 
+2. Data Availability
+   * Hospitals can participate without sharing data 
+   * More diverse training data 
+   * Rare cases can contribute 
+3. Continuous Improvement
+   * Model improves from real-world usage 
+   * Adapts to regional variations 
+   * Learns from corrections 
+4. Trust Building
+   * Users trust the app more 
+   * Healthcare institutions can participate 
+   * Regulatory compliance easier 
+FL Technical Requirements
+Server Side:
+├── Python backend (Flask/FastAPI)
+├── TensorFlow Federated / Flower framework
+├── Secure aggregation
+├── Model versioning
+└── Communication protocol (gRPC/REST)
+
+
+Client Side (App):
+├── Local training capability
+├── Gradient computation
+├── Secure communication
+├── Model update mechanism
+└── Training data management (with consent)
+Other Pending Tasks
+Task
+	Priority
+	Description
+	iOS Support
+	Medium
+	Port to iOS platform
+	Multi-language
+	Low
+	Add regional language support
+	Cloud Backup
+	Low
+	Optional cloud sync for history
+	Doctor Portal
+	Low
+	Web dashboard for healthcare providers
+	Analytics
+	Low
+	Anonymous usage statistics
+	
+
+📚 References
+Datasets
+1. Kaggle Oral Cancer Datasets 
+2. AIIMS Delhi Oral Cancer Research Dataset 
+3. Roboflow Public Datasets 
+Frameworks & Libraries
+* Flutter 
+* TensorFlow Lite 
+* Ultralytics YOLO 
+* Google Gemini API 
+Research Papers
+[1]R. Singh, N. Sharma, K. Rajput, and M. Kumar, "Oral lesions classification using EfficientNet transfer learning model," in Proc. Int. Conf. Artif. Intell. Smart Syst. (ICAIS), 2024, pp. 1-6.​
+[2]S.-Y. Huang et al., "Deep oral cancer lesion segmentation with heterogeneous features," in Proc. IEEE Int. Conf. Recent Adv. Syst. Sci. Eng. (RASSE), 2022, pp. 1-6, doi: 10.1109/RASSE54974.2022.9989871.​
+[3]N. C. Brintha et al., "Detection of periapical lesions in dental X-rays and oral scan using computer vision model," in Proc. 6th Int. Conf. Mobile Comput. Sustain. Inform. (ICMCSI), 2025, pp. 1397-1398, doi: 10.1109/ICMCSI64620.2025.10883588.​
+[4]Kavyashree C, H. S. Vimala, and Shreyas J, "Detection and segmentation of oral lesion using Mask R-CNN," in Proc. Asian Conf. Intell. Technol. (ACOIT), 2024, pp. 1-4, doi: 10.1109/ACOIT62457.2024.10939183.​
+
+
+👥 Team
+Role
+	Responsibility
+	ML Engineer
+	Model training, TFLite export, inference optimization
+	App Developer
+	Flutter app, Native Android integration
+	UI/UX
+	Screen designs, user experience
+	Documentation
+	README, presentation materials
+	
+
+📄 License
+This project is developed for educational/research purposes as part of DTL (Design Thinking Lab) project.
+
+
+⚠️ Disclaimer
+This application is a screening tool only and is NOT a replacement for professional medical diagnosis.
+* Results are AI-generated predictions, not clinical diagnoses 
+* Always consult a qualified healthcare professional 
+* Do not make medical decisions based solely on this app 
+* The developers are not liable for any medical decisions made using this tool 
+
+
+Last Updated: December 2024
