@@ -1,0 +1,20 @@
+# Flask and web server
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# TensorFlow for model handling
+tensorflow==2.15.0
+# OR for CPU-only (lighter):
+# tensorflow-cpu==2.15.0
+
+# NumPy for array operations
+numpy==1.26.4
+
+# Python environment variables
+python-dotenv==1.0.0
+
+# CORS support (if needed for web clients)
+flask-cors==4.0.0
+
+# Logging
+colorlog==6.8.0

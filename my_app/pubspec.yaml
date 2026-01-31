@@ -1,0 +1,30 @@
+name: my_app
+description: Oral Cancer Detection App
+publish_to: none
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.1.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  shared_preferences: ^2.2.2
+  cupertino_icons: ^1.0.2
+  image_picker: ^1.0.4
+  http: ^1.1.0
+  flutter_dotenv: ^5.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+  #  - assets/yolo_oral_cancer.tflite
+  #  - assets/mobilenetv2_oral_cancer.tflite

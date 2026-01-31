@@ -4,9 +4,25 @@ A hybrid deep learning mobile app with **YOLOv11n** for lesion detection and **M
 
 ## Quick Start
 
-### 1. Train Base Models (For Custom Use Cases)
+### 1. Use Pre-trained Models (Recommended)
 
-If you want to train models for a different purpose, follow these steps:
+Pre-trained models are already included in `models/` directory. No training required!
+
+**For Mobile App:**
+```bash
+# Copy TFLite models to Flutter assets
+cp models/*.tflite my_app/android/app/src/main/assets/
+cd my_app && flutter run
+```
+
+**For FL Server:**
+```bash
+cp models/mobilenetv2_oral_cancer_best.h5 server/models/global_model.h5
+```
+
+### 2. Train Your Own Models (Optional)
+
+If you want to train models for a different dataset:
 
 ```bash
 # Step 1: Train YOLO detection model
@@ -20,7 +36,7 @@ python mobilenetx2_train.py
 # Output: mobilenetv2_*.h5
 ```
 
-### 2. Run Federated Learning
+### 3. Run Federated Learning
 
 **Server:**
 ```bash
@@ -53,6 +69,9 @@ Place your `.tflite` models in `my_app/android/app/src/main/assets/`
 ## Project Structure
 
 ```
+├── models/                  # Pre-trained base models
+│   ├── yolo_oral_cancer.tflite        # YOLOv11n detection model
+│   └── mobilenetv2_oral_cancer.tflite # MobileNetV2 classification model
 ├── Yolo/                    # YOLO training scripts
 ├── mobilenetV2/             # MobileNetV2 training scripts
 ├── server/                  # FL aggregation server
@@ -60,6 +79,17 @@ Place your `.tflite` models in `my_app/android/app/src/main/assets/`
 ├── my_app/                  # Flutter mobile app
 └── FL_ARCHITECTURE.md       # Detailed FL documentation
 ```
+
+## Pre-trained Models
+
+Base models are included in `models/` directory:
+
+| Model | File | Size | Purpose |
+|-------|------|------|---------|
+| YOLOv11n | `yolo_oral_cancer.tflite` | ~10 MB | Mobile app - lesion detection |
+| YOLOv11n | `yolo_weights.pt` | ~5.5 MB | Training weights |
+| MobileNetV2 | `mobilenetv2_oral_cancer.tflite` | ~2.5 MB | Mobile app - classification |
+| MobileNetV2 | `mobilenetv2_oral_cancer_best.h5` | ~29 MB | FL server base model |
 
 ## How It Works
 
