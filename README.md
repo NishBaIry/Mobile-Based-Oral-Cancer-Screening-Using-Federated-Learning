@@ -1,4 +1,4 @@
-# Mobile-Based Oral Cancer Screening Using Federated Learning
+# Oral-Scan - Oral Cancer Screening System with Federated Learning
 
 A hybrid deep learning mobile app with **YOLOv11n** for lesion detection and **MobileNetV2** for malignancy classification, using federated learning for privacy-preserving collaborative training across multiple clients.
 
